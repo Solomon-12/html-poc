@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How to choose a git branching strategy: a decision flowchart and comparison of trunk-based development, GitHub Flow, GitFlow and release branching.">
+<title>Choosing a branching strategy</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html">Branching strategies<span>a field guide</span></a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="index.html" aria-current="page">Overview</a>
+      <a href="trunk-based.html">Trunk-based</a>
+      <a href="gitflow.html">GitFlow</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Choosing a branching strategy</h1>
+  <p class="lead">A branching strategy is not a matter of taste. It falls out of three facts about your team: how often you release, how quickly changes get reviewed, and how many versions you must keep alive in production. Answer those honestly and the choice mostly makes itself.</p>
+
+  <figure class="panel">
+    <svg viewBox="0 0 960 470" role="img" aria-label="Decision flowchart: release cadence, review speed and supported versions lead to trunk-based development, GitHub Flow, GitFlow or release branching">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#898781"/>
+        </marker>
+      </defs>
+
+      <!-- edges -->
+      <g fill="none" stroke="#898781" stroke-width="1.5" marker-end="url(#arr)">
+        <path d="M200 214 L258 214 L258 118 L326 118"/>
+        <path d="M200 242 L258 242 L258 348 L326 348"/>
+        <path d="M554 100 C 620 100, 650 78, 714 78"/>
+        <path d="M554 136 C 620 136, 650 178, 714 178"/>
+        <path d="M554 330 C 620 330, 650 328, 714 328"/>
+        <path d="M554 366 C 620 366, 650 426, 714 426"/>
+      </g>
+      <g font-size="12" fill="#52514e">
+        <text x="266" y="168">several times a day</text>
+        <text x="266" y="300">on a schedule</text>
+        <text x="572" y="93">yes</text>
+        <text x="572" y="155">no</text>
+        <text x="572" y="323">yes</text>
+        <text x="572" y="388">no</text>
+      </g>
+
+      <!-- start node -->
+      <rect x="20" y="190" width="180" height="76" rx="10" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1.5"/>
+      <text x="110" y="222" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">How often do you</text>
+      <text x="110" y="242" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">release to production?</text>
+
+      <!-- decision nodes -->
+      <rect x="330" y="72" width="224" height="92" rx="10" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1.5"/>
+      <text x="442" y="105" text-anchor="middle" font-size="14" fill="#0b0b0b">Can changes merge within</text>
+      <text x="442" y="124" text-anchor="middle" font-size="14" fill="#0b0b0b">a day, hiding unfinished</text>
+      <text x="442" y="143" text-anchor="middle" font-size="14" fill="#0b0b0b">work behind feature flags?</text>
+
+      <rect x="330" y="302" width="224" height="92" rx="10" fill="#fcfcfb" stroke="#0b0b0b" stroke-width="1.5"/>
+      <text x="442" y="335" text-anchor="middle" font-size="14" fill="#0b0b0b">Several release lines live</text>
+      <text x="442" y="354" text-anchor="middle" font-size="14" fill="#0b0b0b">at once, or formal sign-off</text>
+      <text x="442" y="373" text-anchor="middle" font-size="14" fill="#0b0b0b">before each release?</text>
+
+      <!-- outcome nodes -->
+      <rect x="718" y="40" width="222" height="76" rx="10" fill="#eaf2fb" stroke="#2a78d6" stroke-width="1.5"/>
+      <text x="829" y="73" text-anchor="middle" font-size="15" font-weight="600" fill="#0b0b0b">Trunk-based development</text>
+      <text x="829" y="94" text-anchor="middle" font-size="12" fill="#52514e">all work lands on main daily</text>
+
+      <rect x="718" y="140" width="222" height="76" rx="10" fill="#e3f5ee" stroke="#1baf7a" stroke-width="1.5"/>
+      <text x="829" y="173" text-anchor="middle" font-size="15" font-weight="600" fill="#0b0b0b">GitHub Flow</text>
+      <text x="829" y="194" text-anchor="middle" font-size="12" fill="#52514e">short-lived branches + pull requests</text>
+
+      <rect x="718" y="290" width="222" height="76" rx="10" fill="#edebf7" stroke="#4a3aa7" stroke-width="1.5"/>
+      <text x="829" y="323" text-anchor="middle" font-size="15" font-weight="600" fill="#0b0b0b">GitFlow</text>
+      <text x="829" y="344" text-anchor="middle" font-size="12" fill="#52514e">develop, release and hotfix lanes</text>
+
+      <rect x="718" y="388" width="222" height="76" rx="10" fill="#fdf3dd" stroke="#eda100" stroke-width="1.5"/>
+      <text x="829" y="421" text-anchor="middle" font-size="15" font-weight="600" fill="#0b0b0b">Release branching</text>
+      <text x="829" y="442" text-anchor="middle" font-size="12" fill="#52514e">one branch per release train</text>
+    </svg>
+    <figcaption>Team size pushes in the same directions: small, co-located teams with fast reviews can carry trunk-based development; large or distributed teams, and teams shipping versioned software, tend towards the heavier flows on the lower path.</figcaption>
+  </figure>
+
+  <h2>The four strategies at a glance</h2>
+  <div class="table-scroll">
+    <table class="data">
+      <thead>
+        <tr>
+          <th scope="col">Strategy</th>
+          <th scope="col">Long-lived branches</th>
+          <th scope="col">Typical release cadence</th>
+          <th scope="col">Sweet spot</th>
+          <th scope="col">Cost to watch</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="trunk-based.html">Trunk-based</a></td>
+          <td><code>main</code> only</td>
+          <td>Continuous — many deploys a day</td>
+          <td>Experienced teams with strong CI and feature flags</td>
+          <td>Demands discipline: a red <code>main</code> blocks everyone</td>
+        </tr>
+        <tr>
+          <td>GitHub Flow</td>
+          <td><code>main</code> only; features are short-lived branches</td>
+          <td>Continuous to weekly</td>
+          <td>Small to mid-sized teams reviewing via pull requests</td>
+          <td>Long-lived PRs drift and accumulate merge conflicts</td>
+        </tr>
+        <tr>
+          <td><a href="gitflow.html">GitFlow</a></td>
+          <td><code>main</code> + <code>develop</code> (plus release and hotfix branches)</td>
+          <td>Scheduled, versioned releases</td>
+          <td>Versioned products with several supported release lines</td>
+          <td>Heavy merge traffic; changes reach production slowly</td>
+        </tr>
+        <tr>
+          <td>Release branching</td>
+          <td><code>main</code> + one branch per release</td>
+          <td>Train-based, e.g. every six weeks</td>
+          <td>Products needing a stabilisation window or backports</td>
+          <td>Fixes must be cherry-picked across live branches</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What actually differs between them</h2>
+  <p>Strip away the naming conventions and only three mechanics vary:</p>
+  <ul>
+    <li><strong>Where integration happens.</strong> Trunk-based teams integrate on <code>main</code> continuously; GitFlow teams integrate on <code>develop</code> and only promote to <code>main</code> at release time. The longer integration is deferred, the larger and riskier each merge becomes.</li>
+    <li><strong>How a release is cut.</strong> Either every green build of <code>main</code> is releasable, or a release is an event: a branch is cut, stabilised, signed off and tagged.</li>
+    <li><strong>How an urgent fix reaches production.</strong> On trunk it is just the next commit. With release or hotfix branches, the fix must land in two places — production and the integration line — and forgetting the second is the classic GitFlow regression.</li>
+  </ul>
+
+  <h2>Rules of thumb</h2>
+  <ul>
+    <li>If you deploy a web service and could deploy more often than you do, move towards <a href="trunk-based.html">trunk-based development</a> — the constraint is usually CI and review speed, not git.</li>
+    <li>If you ship versioned software — mobile apps on store review cycles, SDKs, on-prem installs — some form of release branch is unavoidable; <a href="gitflow.html">GitFlow</a> is the fully worked-out version of that idea.</li>
+    <li>Whatever you choose, keep branches short-lived. Branch lifetime, not branch naming, is the strongest predictor of merge pain.</li>
+  </ul>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>Branching strategies — a field guide</span>
+    <span>Next: <a href="trunk-based.html">Trunk-based development</a> · <a href="gitflow.html">GitFlow</a></span>
+  </div>
+</footer>
+
+</body>
+</html>

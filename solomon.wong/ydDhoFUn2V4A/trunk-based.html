@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Trunk-based development explained: a commit graph of short-lived branches merging to main, feature flags, CI expectations, and honest pros and cons.">
+<title>Trunk-based development</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="index.html">Branching strategies<span>a field guide</span></a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="index.html">Overview</a>
+      <a href="trunk-based.html" aria-current="page">Trunk-based</a>
+      <a href="gitflow.html">GitFlow</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Trunk-based development</h1>
+  <p class="lead">One shared branch — the trunk, usually called <code>main</code> — that everyone integrates into at least daily. Branches still exist, but they live for hours or a day or two, not weeks, and the trunk is kept releasable at all times.</p>
+
+  <h2>What the history looks like</h2>
+  <figure class="panel">
+    <svg viewBox="0 0 920 260" role="img" aria-label="Commit graph: a continuous main line with two short-lived feature branches that merge back within hours to a day; releases are tagged directly on main">
+      <!-- main lane -->
+      <line x1="60" y1="155" x2="890" y2="155" stroke="#2a78d6" stroke-width="3"/>
+      <text x="16" y="160" font-size="13" font-weight="700" fill="#0b0b0b">main</text>
+
+      <!-- release tags cut straight from main -->
+      <g font-size="11" fill="#0b0b0b" text-anchor="middle">
+        <rect x="64" y="110" width="52" height="20" rx="4" fill="#f1f0ea" stroke="#e1e0d9"/>
+        <text x="90" y="124">v3.1.0</text>
+        <line x1="90" y1="130" x2="90" y2="146" stroke="#898781" stroke-width="1"/>
+        <rect x="704" y="110" width="52" height="20" rx="4" fill="#f1f0ea" stroke="#e1e0d9"/>
+        <text x="730" y="124">v3.2.0</text>
+        <line x1="730" y1="130" x2="730" y2="146" stroke="#898781" stroke-width="1"/>
+      </g>
+
+      <!-- short-lived branch: feature/pay-by-qr (violet) -->
+      <path d="M170 155 C 202 155, 203 85, 235 85 L 320 85 C 358 85, 372 155, 410 155" fill="none" stroke="#4a3aa7" stroke-width="2.5"/>
+      <circle cx="255" cy="85" r="7" fill="#fcfcfb" stroke="#4a3aa7" stroke-width="3"/>
+      <circle cx="320" cy="85" r="7" fill="#fcfcfb" stroke="#4a3aa7" stroke-width="3"/>
+      <text x="282" y="60" text-anchor="middle" font-size="12" fill="#52514e">feature/pay-by-qr — two commits, about a day</text>
+
+      <!-- feature flag annotation on the merge -->
+      <path d="M412 147 L440 130" stroke="#898781" stroke-width="1" fill="none"/>
+      <line x1="440" y1="130" x2="440" y2="102" stroke="#52514e" stroke-width="1.5"/>
+      <path d="M440 102 L456 108 L440 114 z" fill="#eda100"/>
+      <text x="462" y="112" font-size="12" fill="#52514e">merges dark — <tspan font-weight="600">qr_checkout</tspan> flag off in production</text>
+
+      <!-- short-lived branch: feature/fx-quote (aqua) -->
+      <path d="M490 155 C 522 155, 523 215, 555 215 L 585 215 C 618 215, 618 155, 650 155" fill="none" stroke="#1baf7a" stroke-width="2.5"/>
+      <circle cx="570" cy="215" r="7" fill="#fcfcfb" stroke="#1baf7a" stroke-width="3"/>
+      <text x="610" y="245" text-anchor="middle" font-size="12" fill="#52514e">feature/fx-quote — one commit, a few hours</text>
+
+      <!-- main commits drawn last so they sit on top of branch curves -->
+      <g fill="#fcfcfb" stroke="#2a78d6" stroke-width="3">
+        <circle cx="90" cy="155" r="7"/>
+        <circle cx="170" cy="155" r="7"/>
+        <circle cx="250" cy="155" r="7"/>
+        <circle cx="330" cy="155" r="7"/>
+        <circle cx="410" cy="155" r="7"/>
+        <circle cx="490" cy="155" r="7"/>
+        <circle cx="570" cy="155" r="7"/>
+        <circle cx="650" cy="155" r="7"/>
+        <circle cx="730" cy="155" r="7"/>
+        <circle cx="810" cy="155" r="7"/>
+      </g>
+
+      <text x="890" y="245" text-anchor="end" font-size="12" fill="#898781">time →</text>
+    </svg>
+    <figcaption>Branches diverge from <code>main</code> and return within hours to a day. Incomplete work still merges — it ships dark behind a feature flag — and releases are tagged directly on the trunk, because every green commit is a release candidate.</figcaption>
+  </figure>
+
+  <h2>Feature flags do the heavy lifting</h2>
+  <p>Short-lived branches only work if half-finished features can merge safely. Feature flags make that possible by decoupling <em>deployment</em> (the code is on the servers) from <em>release</em> (users can see it):</p>
+  <ul>
+    <li>Unfinished work merges behind a flag that is off in production, so integration never waits for feature completeness.</li>
+    <li>Release becomes a configuration change — flip the flag for 1% of users, watch the dashboards, ramp up — and rollback is flipping it off, not reverting a merge.</li>
+    <li>Flags are debt: every flag needs an owner and a removal date. A codebase full of stale flags is harder to reason about than the long-lived branches it replaced.</li>
+  </ul>
+
+  <h2>What your CI must be able to do</h2>
+  <p>Trunk-based development moves the safety net from branching structure to automation. Before adopting it, be honest about whether these hold:</p>
+  <ul>
+    <li><strong>Fast pre-merge checks.</strong> Build plus unit tests in under ten minutes on every proposed commit; anything slower moves to a post-merge stage.</li>
+    <li><strong>A merge queue.</strong> Commits are validated against the exact state of <code>main</code> they will land on, so two individually green changes cannot break the trunk together.</li>
+    <li><strong>Stop-the-line discipline.</strong> A red <code>main</code> is everyone's problem. The default response is revert first, investigate later — the trunk must return to green in minutes, not hours.</li>
+    <li><strong>Post-merge depth.</strong> Slower integration and end-to-end suites run continuously against the trunk, and their failures page the author of the merge that broke them.</li>
+    <li><strong>Deployment from main.</strong> Releases are cut (and tagged) straight from the trunk — if deploying <code>main</code> right now feels frightening, fix that before deleting your branches.</li>
+  </ul>
+
+  <h2>How releases are cut</h2>
+  <p>Trunk-based teams release in one of two ways, and the choice is about audit needs rather than safety:</p>
+  <ol>
+    <li><strong>Release from trunk.</strong> Every deploy is a tagged commit on <code>main</code> — the pattern in the diagram above. Rollback means redeploying the previous tag. This is the default for continuously deployed services.</li>
+    <li><strong>Branch for release.</strong> A branch such as <code>release/3.2</code> is cut from the trunk at the release point and receives only cherry-picked fixes — never direct feature work, and it is never merged back. Teams shipping versioned artefacts (mobile builds, installers) use this without giving up daily integration on the trunk.</li>
+  </ol>
+  <p>Note what is absent in both cases: there is no <code>develop</code> branch, no long stabilisation phase, and fixes always land on the trunk first, then flow outwards to any release branch that needs them.</p>
+
+  <h2>Pros and cons</h2>
+  <div class="split">
+    <div class="card pro">
+      <h3>Strengths</h3>
+      <ul>
+        <li>Integration pain is paid in small daily instalments instead of a monstrous merge at release time.</li>
+        <li>Small diffs get better reviews — a 200-line change is reviewable, a 5,000-line branch is skimmed.</li>
+        <li>The deployable artefact is always known: it is <code>main</code>.</li>
+        <li>One long-lived branch keeps CI simple and cheap.</li>
+        <li>It is the natural substrate for continuous delivery and progressive rollout.</li>
+      </ul>
+    </div>
+    <div class="card con">
+      <h3>Trade-offs</h3>
+      <ul>
+        <li>Weak test automation is fatal — the trunk is only as safe as the checks guarding it.</li>
+        <li>Feature-flag debt accumulates unless removal is actively managed.</li>
+        <li>Slow review cultures turn "short-lived" branches into long-lived ones with a different name.</li>
+        <li>Formal release sign-off or several supported versions in production push you back towards release branches — see <a href="gitflow.html">GitFlow</a>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>When to choose it</h2>
+  <p>Trunk-based development fits teams shipping a single live version of a service — web applications, APIs, internal platforms — that deploy at least daily and already trust their CI. If you ship versioned software on a schedule, or must keep old release lines alive, read the <a href="gitflow.html">GitFlow</a> page instead: the answer there is different for good reasons.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>Branching strategies — a field guide</span>
+    <span><a href="index.html">Overview</a> · Next: <a href="gitflow.html">GitFlow</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
