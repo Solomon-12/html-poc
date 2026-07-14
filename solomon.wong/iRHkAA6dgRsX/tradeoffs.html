@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trade-offs — Event-Driven Architecture, visually explained</title>
+<meta name="description" content="At-most-once, at-least-once and exactly-once delivery, plus an honest comparison of event-driven versus request/response.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html">Event-Driven Architecture <span class="brand-note">— visually explained</span></a>
+    <nav class="site-nav" aria-label="Site">
+      <a href="index.html">Overview</a>
+      <a href="patterns.html">Patterns</a>
+      <a href="tradeoffs.html" aria-current="page">Trade-offs</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <p class="kicker">A field guide · Part 3 of 3</p>
+    <h1>Delivery guarantees, and an honest comparison</h1>
+    <p class="lede">Networks drop packets, brokers restart and consumers crash mid-message. Every messaging system
+    must decide what happens then — and each answer trades data loss against duplicates against complexity.</p>
+  </div>
+
+  <section id="guarantees">
+    <p class="section-kicker">01 — Delivery semantics</p>
+    <h2>At-most-once, at-least-once, exactly-once</h2>
+    <p>The three guarantees differ in one question: <strong>what does the sender do when it isn't sure the message
+    arrived?</strong> Give up (at-most-once), retry (at-least-once), or retry <em>and</em> make duplicates harmless
+    (exactly-once processing).</p>
+
+    <figure class="diagram">
+      <svg viewBox="0 0 920 350" role="img" aria-labelledby="dg-title">
+        <title id="dg-title">Three lanes showing at-most-once losing a message, at-least-once duplicating one, and exactly-once deduplicating retries.</title>
+        <defs>
+          <marker id="arr5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#52514e"/>
+          </marker>
+        </defs>
+
+        <text x="203" y="34" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="1.5" fill="#898781">PRODUCER</text>
+        <text x="783" y="34" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="1.5" fill="#898781">CONSUMER</text>
+
+        <!-- lane 1: at-most-once -->
+        <text x="20" y="68" font-size="14.5" font-weight="700" fill="#0b0b0b">At-most-once</text>
+        <text x="20" y="88" font-size="11.5" fill="#898781">send once, never retry</text>
+        <rect x="180" y="52" width="46" height="36" rx="7" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+        <text x="203" y="75" text-anchor="middle" font-size="13" font-weight="650" fill="#0b0b0b">P</text>
+        <rect x="760" y="52" width="46" height="36" rx="7" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+        <text x="783" y="75" text-anchor="middle" font-size="13" font-weight="650" fill="#0b0b0b">C</text>
+        <line x1="226" y1="70" x2="448" y2="70" stroke="#52514e" stroke-width="1.75"/>
+        <line x1="460" y1="58" x2="484" y2="82" stroke="#e34948" stroke-width="3"/>
+        <line x1="484" y1="58" x2="460" y2="82" stroke="#e34948" stroke-width="3"/>
+        <line x1="496" y1="70" x2="754" y2="70" stroke="#e1e0d9" stroke-width="1.75" stroke-dasharray="4 5"/>
+        <text x="620" y="98" text-anchor="middle" font-size="12" font-style="italic" fill="#898781">message lost in transit — nobody notices, nobody retries: 0 or 1 delivery</text>
+
+        <!-- lane 2: at-least-once -->
+        <text x="20" y="168" font-size="14.5" font-weight="700" fill="#0b0b0b">At-least-once</text>
+        <text x="20" y="188" font-size="11.5" fill="#898781">retry until acknowledged</text>
+        <rect x="180" y="152" width="46" height="36" rx="7" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+        <text x="203" y="175" text-anchor="middle" font-size="13" font-weight="650" fill="#0b0b0b">P</text>
+        <rect x="760" y="152" width="46" height="36" rx="7" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+        <text x="783" y="175" text-anchor="middle" font-size="13" font-weight="650" fill="#0b0b0b">C</text>
+        <line x1="226" y1="162" x2="754" y2="162" stroke="#52514e" stroke-width="1.75" marker-end="url(#arr5)"/>
+        <text x="480" y="152" text-anchor="middle" font-size="11.5" fill="#898781">attempt 1 — delivered, but the ack is lost on the way back</text>
+        <line x1="226" y1="182" x2="754" y2="182" stroke="#52514e" stroke-width="1.75" stroke-dasharray="6 5" marker-end="url(#arr5)"/>
+        <text x="480" y="200" text-anchor="middle" font-size="11.5" fill="#898781">attempt 2 — retry, delivered again</text>
+        <rect x="820" y="152" width="76" height="36" rx="18" fill="#fcfcfb" stroke="#eda100" stroke-width="2"/>
+        <text x="858" y="175" text-anchor="middle" font-size="12" font-weight="650" fill="#0b0b0b">×2 !</text>
+        <text x="490" y="224" text-anchor="middle" font-size="12" font-style="italic" fill="#898781">nothing is lost, but the consumer sees duplicates: 1 or more deliveries</text>
+
+        <!-- lane 3: exactly-once -->
+        <text x="20" y="284" font-size="14.5" font-weight="700" fill="#0b0b0b">Exactly-once</text>
+        <text x="20" y="304" font-size="11.5" fill="#898781">retries + deduplication</text>
+        <rect x="180" y="268" width="46" height="36" rx="7" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+        <text x="203" y="291" text-anchor="middle" font-size="13" font-weight="650" fill="#0b0b0b">P</text>
+        <rect x="760" y="268" width="46" height="36" rx="7" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+        <text x="783" y="291" text-anchor="middle" font-size="13" font-weight="650" fill="#0b0b0b">C</text>
+        <line x1="226" y1="278" x2="574" y2="278" stroke="#52514e" stroke-width="1.75" marker-end="url(#arr5)"/>
+        <line x1="226" y1="296" x2="574" y2="296" stroke="#52514e" stroke-width="1.75" stroke-dasharray="6 5" marker-end="url(#arr5)"/>
+        <rect x="580" y="262" width="132" height="48" rx="9" fill="#fcfcfb" stroke="#008300" stroke-width="2.5"/>
+        <text x="646" y="283" text-anchor="middle" font-size="12.5" font-weight="650" fill="#0b0b0b">idempotent handler</text>
+        <text x="646" y="300" text-anchor="middle" font-size="11" fill="#52514e">drops duplicates by ID</text>
+        <line x1="712" y1="286" x2="754" y2="286" stroke="#52514e" stroke-width="1.75" marker-end="url(#arr5)"/>
+        <text x="470" y="334" text-anchor="middle" font-size="12" font-style="italic" fill="#898781">retries still happen on the wire — the effect is applied exactly once</text>
+      </svg>
+      <figcaption>“Exactly-once” is really <strong>effectively-once processing</strong>: messages may still travel
+      twice, but idempotent handlers, deduplication keys or transactions ensure the <em>effect</em> happens once.
+      True exactly-once <em>delivery</em> over an unreliable network is impossible (the Two Generals problem).</figcaption>
+    </figure>
+
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag">At-most-once</span>
+        <h3>Cheap, lossy</h3>
+        <p>Lowest latency and overhead; acceptable when a lost message costs nothing — metrics ticks, presence
+        pings, sensor readings that will be superseded a second later.</p>
+      </div>
+      <div class="card">
+        <span class="tag">At-least-once</span>
+        <h3>The practical default</h3>
+        <p>What Kafka, SQS and RabbitMQ give you out of the box. Pair it with idempotent consumers —
+        keyed on an event ID — and duplicates become a non-event.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Exactly-once</span>
+        <h3>Expensive, bounded</h3>
+        <p>Kafka transactions achieve it within a Kafka-to-Kafka pipeline; the moment you touch an external
+        system (an email, a payment API), you are back to designing idempotency yourself.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="comparison">
+    <p class="section-kicker">02 — The honest comparison</p>
+    <h2>Events versus request/response</h2>
+    <p>Neither style wins outright. Request/response keeps its considerable virtues — immediacy, simplicity,
+    easy debugging — and mature systems use both deliberately. Here is the scorecard without the marketing.</p>
+
+    <div class="table-scroll">
+      <table>
+        <caption>Event-driven versus request/response, dimension by dimension</caption>
+        <thead>
+          <tr>
+            <th scope="col">Dimension</th>
+            <th scope="col">Event-driven</th>
+            <th scope="col">Request/response</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Coupling</td>
+            <td>Loose — producers know topics, not consumers; new consumers need no producer change</td>
+            <td>Tight — caller knows the callee's address, API shape and availability</td>
+          </tr>
+          <tr>
+            <td>Getting an answer</td>
+            <td>Awkward — replies need correlation IDs and a return topic, or a separate query</td>
+            <td>Natural — the answer is the response, in the same interaction</td>
+          </tr>
+          <tr>
+            <td>Consistency</td>
+            <td>Eventual — consumers lag the truth by milliseconds to minutes</td>
+            <td>Immediate — the caller sees the result before proceeding</td>
+          </tr>
+          <tr>
+            <td>Failure isolation</td>
+            <td>Strong — a dead consumer just builds a backlog; others are untouched</td>
+            <td>Weak — a slow callee stalls the caller; failures cascade without circuit breakers</td>
+          </tr>
+          <tr>
+            <td>Load spikes</td>
+            <td>Absorbed — the broker buffers and consumers drain at their own rate</td>
+            <td>Punishing — spikes become timeouts and retries at the worst moment</td>
+          </tr>
+          <tr>
+            <td>Debugging &amp; tracing</td>
+            <td>Harder — causality spans asynchronous hops; needs correlation IDs and good tooling</td>
+            <td>Easier — one stack trace, one timeline, one place to look</td>
+          </tr>
+          <tr>
+            <td>Operational surface</td>
+            <td>Larger — broker, schema registry, consumer lag, dead-letter queues, replay tooling</td>
+            <td>Smaller — a load balancer and the service itself</td>
+          </tr>
+          <tr>
+            <td>Evolving contracts</td>
+            <td>Additive schema changes are easy; breaking changes need versioned topics</td>
+            <td>API versioning is well-trodden; breaking changes still hurt, but visibly</td>
+          </tr>
+          <tr>
+            <td>Replay &amp; audit</td>
+            <td>Built in — the log is history; rebuild views or backfill consumers from it</td>
+            <td>Absent — unless you add an audit log as a separate concern</td>
+          </tr>
+          <tr>
+            <td>Best fit</td>
+            <td>Fan-out reactions, integration across teams, spiky pipelines, audit trails</td>
+            <td>Lookups, validations, anything where the caller must know the outcome now</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p><strong>The honest summary:</strong> events buy you decoupling and resilience with the currency of
+      eventual consistency and operational complexity. If you are not prepared to spend that currency —
+      idempotent consumers, monitoring for consumer lag, a dead-letter strategy — request/response is not
+      a lesser choice; it is the correct one.</p>
+    </div>
+  </section>
+
+  <nav class="pager" aria-label="Pages">
+    <a href="patterns.html"><span class="dir">Previous</span>← Patterns: pub/sub, event sourcing, CQRS</a>
+    <a class="next" href="index.html"><span class="dir">Start over</span>Overview: what EDA is →</a>
+  </nav>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>Event-Driven Architecture, visually explained · Part 3 of 3 · Demo content for platform testing — Internal, Ryt Bank.</p>
+  </div>
+</footer>
+
+</body>
+</html>
